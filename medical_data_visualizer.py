@@ -3,58 +3,76 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-# 1
-df = None
+# 1. Cargar datos
+df = pd.read_csv('medical_examination.csv')
 
-# 2
-df['overweight'] = None
+# 2. Columna overweight — BMI = peso(kg) / altura(m)²
+df['overweight'] = (df['weight'] / (df['height'] / 100) ** 2 > 25).astype(int)
 
-# 3
+# 3. Normalizar cholesterol y gluc: 1→0 (normal), >1→1 (malo)
+df['cholesterol'] = (df['cholesterol'] > 1).astype(int)
+df['gluc']        = (df['gluc'] > 1).astype(int)
 
 
-# 4
 def draw_cat_plot():
-    # 5
-    df_cat = None
+    # 4. Crear DataFrame en formato largo con pd.melt
+    df_cat = pd.melt(
+        df,
+        id_vars='cardio',
+        value_vars=['cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight']
+    )
 
+    # 5. Agrupar y contar, renombrar columna para catplot
+    df_cat = df_cat.groupby(['cardio', 'variable', 'value']).size().reset_index()
+    df_cat.rename(columns={0: 'total'}, inplace=True)
 
-    # 6
-    df_cat = None
-    
+    # 6. Dibujar catplot
+    fig = sns.catplot(
+        data=df_cat,
+        x='variable',
+        y='total',
+        hue='value',
+        col='cardio',
+        kind='bar'
+    ).fig
 
-    # 7
-
-
-
-    # 8
-    fig = None
-
-
-    # 9
+    # 7. Guardar y retornar
     fig.savefig('catplot.png')
     return fig
 
 
-# 10
 def draw_heat_map():
-    # 11
-    df_heat = None
+    # 8. Limpiar datos incorrectos
+    df_heat = df[
+        (df['ap_lo']  <= df['ap_hi'])                          &
+        (df['height'] >= df['height'].quantile(0.025))         &
+        (df['height'] <= df['height'].quantile(0.975))         &
+        (df['weight'] >= df['weight'].quantile(0.025))         &
+        (df['weight'] <= df['weight'].quantile(0.975))
+    ]
 
-    # 12
-    corr = None
+    # 9. Matriz de correlación
+    corr = df_heat.corr()
 
-    # 13
-    mask = None
+    # 10. Máscara para triángulo superior
+    mask = np.zeros_like(corr)
+    mask[np.triu_indices_from(mask)] = True
 
+    # 11. Figura matplotlib
+    fig, ax = plt.subplots(figsize=(12, 9))
 
+    # 12. Heatmap
+    sns.heatmap(
+        corr,
+        mask=mask,
+        annot=True,
+        fmt='.1f',
+        center=0,
+        square=True,
+        linewidths=0.5,
+        ax=ax
+    )
 
-    # 14
-    fig, ax = None
-
-    # 15
-
-
-
-    # 16
+    # 13. Guardar y retornar
     fig.savefig('heatmap.png')
     return fig
